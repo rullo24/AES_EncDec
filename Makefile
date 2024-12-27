@@ -8,7 +8,7 @@ ifeq ($(ARCH),x86_64)
 else ifeq ($(ARCH),aarch64)
     LIB_LOC = -L/usr/lib/aarch64-linux-gnu
 endif
-LIBS = $(LIB_LOC) -l:libssl.a -l:libcrypto.a -ldl -pthread
+LIBS = $(LIB_LOC) -l:libssl.a -l:libcrypto.a 
 
 # binary-related
 TARGET = cr_aes_encdec 
