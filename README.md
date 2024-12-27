@@ -1,6 +1,11 @@
 # Overview
 cr_aes_encdec is a CLI tool written in C that provides AES-based encryption and decryption of files. This tool ensures the confidentiality of files by allowing you to encrypt them with a password and decrypt them when needed. It supports safe operations by appending file extensions to avoid accidental overwrites and includes an optional feature to delete the original file after encryption or decryption.
 
+## Compilation - Requirements 
+OpenSSL is the only prerequisite library required for building this program. Install the necessary OpenSSL packages using the following command:
+```bash
+sudo apt install libssl-dev
+```
 ## Compilation - Building
 ```bash
 make

@@ -3,7 +3,12 @@ CC = gcc
 CFLAGS = -g -Wall -Wextra -pedantic -Wno-unused-function -Wno-unused-parameter
 
 # required static libs linkage
-LIBS = -lssl -lcrypto 
+ifeq ($(ARCH),x86_64)
+    LIB_LOC = -L/usr/lib/x86_64-linux-gnu
+else ifeq ($(ARCH),aarch64)
+    LIB_LOC = -L/usr/lib/aarch64-linux-gnu
+endif
+LIBS = $(LIB_LOC) -l:libssl.a -l:libcrypto.a -ldl -pthread
 
 # binary-related
 TARGET = cr_aes_encdec 
