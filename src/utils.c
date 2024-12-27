@@ -6,6 +6,7 @@
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <openssl/aes.h> 
+#include <openssl/rand.h>
 #ifdef _WIN32
 #include <io.h>
 #else
@@ -17,11 +18,8 @@
 
 // func to derive a key from a password --> expects a NULL terminated password
 int derive_key(const char *password, unsigned char *key) {
-    unsigned char salt[16];
-    int salt_get_res = EVP_Digest((const unsigned char*)password, strlen(password), salt, NULL, EVP_sha256(), NULL);
-    if (salt_get_res == OPENSSL_FAIL) {
-        return KEY_ERR;  // Error in generating salt
-    }
+    // unsigned char salt[16];
+    unsigned char salt[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0xFE, 0xDC, 0xBA, 0x98, 0x76, 0x54, 0x32, 0x10 }; 
 
     int res = PKCS5_PBKDF2_HMAC( // OpenSSL func for deriving key
         password, strlen(password), 
@@ -115,6 +113,21 @@ out:
     return res;
 }
 
+int file_loc_valid(const char *filepath) {
+    int res = SUCCESS;
+
+    // checking if user can open file location --> fails if path loc invalid
+    FILE *p_file = fopen(filepath, "w");
+    if (!p_file) {
+        res = INVALID_FILE_PATH_ERR;
+        goto out;
+    }
+    fclose(p_file);
+
+out:
+    return res;
+}
+
 int next_argv_exists(int curr_i, int argc) {
     int res = SUCCESS;
     if (curr_i + 1 == argc) {
@@ -143,7 +156,7 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
             }
             
             // check if provided file exists
-            if (!file_exists(argv[i+1])) {
+            if (file_exists(argv[i+1]) != SUCCESS) {
                 fprintf(stderr, "ERROR: invalid filepath provided (-d)\n");
                 res = INVALID_FILE_PATH_ERR;
                 goto out;
@@ -158,7 +171,7 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
             }
 
             // check if provided file exists
-            if (!file_exists(argv[i+1])) {
+            if (file_exists(argv[i+1]) != SUCCESS) {
                 fprintf(stderr, "ERROR: invalid filepath provided (-e)\n");
                 res = INVALID_FILE_PATH_ERR;
                 goto out;

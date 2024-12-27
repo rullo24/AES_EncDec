@@ -15,6 +15,7 @@ void print_help() {
     printf("-d = Decrypt File\n");
     printf("-e = Encrypt File\n");
     printf("-p = Provide password\n");
+    printf("--remove = Delete the existing file\n");
     printf("=================\n");
 }
 
@@ -52,26 +53,78 @@ int main(int argc, char **argv) {
     }
 
     // checking if password not provided for enc/dec
-    if ((flags.dec_file || flags.enc_file) && !flags.password) {
-        fprintf(stderr, "ERROR: encryption/decryption asked for but no password provided\n");
+    if (!flags.password) {
+        fprintf(stderr, "ERROR: no password provided for encryption/decryption process\n");
         return INVALID_PARSE_ERR;
     }
 
-    // if encrypting, check that not already encrypted (.crenc ext dne) --> err if exists
-    if (flags.enc_file) {
+    // cryptography steps
+    if (flags.enc_file) { // encryption process
+        // if encrypting, check that not already encrypted (.crenc ext dne) --> err if exists
         if (strstr(flags.enc_file, ".crenc") != NULL) { // substring found in larger string when != NULL
             fprintf(stderr, "ERROR: user attempted to encrypt a pre-encrypted file\n");
             return SHOULD_NOT_PERFORM_CRYPTO_ERR;
         }
-    }
 
-    // if decrypting, check that file is encrypted (.crenc ext exists)
-    if (flags.dec_file) {
-        if (strstr(flags.dec_file, ".crenc") == NULL) {
+        // adding encryption extension to end of user-provided location for new file location
+        size_t enc_file_path_len = strlen(flags.enc_file); 
+        char new_enc_filepath[enc_file_path_len + strlen(".crenc")]; // creating a buf to hold new filepath
+        strncpy(new_enc_filepath, flags.enc_file, sizeof(new_enc_filepath)); // copying original string to new buf
+        strncat(new_enc_filepath, ".crenc", sizeof(new_enc_filepath)); // copying encryption ext to end of filepath
+        new_enc_filepath[sizeof(new_enc_filepath)] = '\0'; // ensuring that a NULL terminator exists
+
+        // checking if new path is valid
+        int file_valid_flag = file_loc_valid(new_enc_filepath);
+        if (file_valid_flag != SUCCESS) {
+            fprintf(stderr, "ERROR: encryption path not valid (%s)", new_enc_filepath);
+            return INVALID_FILE_PATH_ERR;
+        }
+
+        // encrypting file and saving to new location
+        int enc_res = encrypt_file(flags.enc_file, new_enc_filepath, flags.password);
+        if (enc_res != SUCCESS) {
+            fprintf(stderr, "ERROR: failed to encrypt file\n");
+            return enc_res;
+        }
+        printf("SUCCESS: Encrypted file stored at (%s)\n", new_enc_filepath);
+
+    } else if (flags.dec_file) { // decryption process
+        // if decrypting, check that file is encrypted (.crenc ext exists)
+        if (strstr(flags.dec_file, ".crenc") == NULL) { // substring not found in larger string when == NULL
             fprintf(stderr, "ERROR: user attempt to decrypt regular file\n");
             return SHOULD_NOT_PERFORM_CRYPTO_ERR;
         }
+        
+        // copying string to a new buffer for string tinkering
+        char new_dec_filepath[strlen(flags.dec_file)];
+        strncpy(new_dec_filepath, flags.dec_file, sizeof(new_dec_filepath)); // copying string to avoid manipulating old string
+        new_dec_filepath[sizeof(new_dec_filepath)] = '\0'; // ensuring string is NULL terminated
+        
+        // getting string from last dot (check if enc extension here)
+        char *p_last_dot = strrchr(new_dec_filepath, '.');
+        if (strcmp(p_last_dot, ".crenc") != 0) { // .crenc not at the end of the string
+            fprintf(stderr, "ERROR: .crenc extension not at end of file location\n");
+            return SHOULD_NOT_PERFORM_CRYPTO_ERR;
+        }
+        *p_last_dot = '\0'; // setting a NULL terminator where there was previously a .crenc extension
+
+        // adding .crdec to end of file to avoid overwriting original file
+        strncat(new_dec_filepath, ".crdec", sizeof(new_dec_filepath));
+
+        // decrypting file and storing at new filepath
+        int dec_res = decrypt_file(flags.dec_file, new_dec_filepath, flags.password);
+        if (dec_res != SUCCESS) {
+            fprintf(stderr, "ERROR: failed to decrypt file (%s)\n", flags.dec_file);
+            return dec_res;
+        }
+
+    } else {
+        fprintf(stderr, "ERROR: unknown error occurred\n");
+        return UNKNOWN_ERR;
     }
+
+    // removing old file if the --remove flag is on
+    // ... TBD later
 
     return SUCCESS;
 }

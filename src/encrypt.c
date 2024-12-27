@@ -10,14 +10,14 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
     FILE *input_file = fopen(input_filename, "rb"); // open the input file for reading
     if (!input_file) {
         fprintf(stderr, "ERROR: failed to open files for encryption\n");
-        res = IO_ERR;
+        res = FILE_OPEN_ERR;
         goto out_basic;
     }
 
     FILE *output_file = fopen(output_filename, "wb"); // open the output file for writing
     if (!output_file) {
         fprintf(stderr, "ERROR: failed to open files for encryption\n");
-        res = IO_ERR;
+        res = FILE_OPEN_ERR;
         goto out_free_io_in;
     }
 
@@ -25,7 +25,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
     derive_key(password, key); 
 
     // create an AES encryption context
-    const unsigned char iv_16[] = IV_16;
+    const unsigned char iv_16[] = { 0x6B, 0x1F, 0x2A, 0x3D, 0x44, 0x5B, 0x6C, 0x77, 0x89, 0x90, 0xAB, 0xBC, 0xCD, 0xDE, 0xEF, 0x00 };
     EVP_CIPHER_CTX *aes_ctx = EVP_CIPHER_CTX_new();
     int ctx_set_res = EVP_EncryptInit_ex(aes_ctx, EVP_aes_256_cbc(), NULL, key, (unsigned char*)iv_16);
     if (ctx_set_res == OPENSSL_FAIL) {
@@ -56,7 +56,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
         bytes_written = fwrite(encrypted_buf, 1, encrypted_len, output_file); 
         if (bytes_written == 0) { // read more than 0 bytes but didnt write any
             fprintf(stderr, "ERROR: read bytes into buffer but could not write these to an output file\n");
-            res = IO_ERR;
+            res = FILE_WRITE_ERR;
             goto out_free_all;
         }
     }
@@ -72,7 +72,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
     bytes_written = fwrite(encrypted_buf, 1, encrypted_len, output_file); // write the final block of encrypted data to the output file
     if (bytes_written == 0) {
         fprintf(stderr, "ERROR: failed to write bytes to output file\n");
-        res = IO_ERR;
+        res = FILE_WRITE_ERR;
         goto out_free_all;
     }
 
