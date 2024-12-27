@@ -83,7 +83,6 @@ int main(int argc, char **argv) {
         // encrypting file and saving to new location
         int enc_res = encrypt_file(flags.enc_file, new_enc_filepath, flags.password);
         if (enc_res != SUCCESS) {
-            fprintf(stderr, "ERROR: failed to encrypt file\n");
             return enc_res;
         }
         printf("SUCCESS: Encrypted file stored at (%s)\n", new_enc_filepath);
@@ -114,9 +113,9 @@ int main(int argc, char **argv) {
         // decrypting file and storing at new filepath
         int dec_res = decrypt_file(flags.dec_file, new_dec_filepath, flags.password);
         if (dec_res != SUCCESS) {
-            fprintf(stderr, "ERROR: failed to decrypt file (%s)\n", flags.dec_file);
             return dec_res;
         }
+        printf("SUCCESS: Decrypted file stored at (%s)\n", new_dec_filepath);
 
     } else {
         fprintf(stderr, "ERROR: unknown error occurred (dec_file and enc_file are both NULL but passed all if statements)\n");
@@ -162,6 +161,8 @@ int main(int argc, char **argv) {
         if (rm_res != SUCCESS) {
             return rm_res;
         }
+
+        printf("SUCCESS: Removed (%s)\n", file_to_rm);
     }
 
     return SUCCESS;

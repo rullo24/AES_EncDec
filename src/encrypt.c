@@ -14,6 +14,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
         goto out_basic;
     }
 
+    // checking if attempting to write over pre-existing file
     FILE *output_file = fopen(output_filename, "wb"); // open the output file for writing
     if (!output_file) {
         fprintf(stderr, "ERROR: failed to open files for encryption\n");
@@ -81,8 +82,10 @@ out_free_all:
     EVP_CIPHER_CTX_free(aes_ctx); 
 out_free_io_all:
     fclose(output_file);
+    output_file = NULL;
 out_free_io_in:
     fclose(input_file);
+    input_file = NULL;
 out_basic:
     return res;
 }

@@ -13,7 +13,6 @@ int decrypt_file(const char *input_filename, const char *output_filename, const 
         res = FILE_OPEN_ERR;
         goto out_basic;
     }
-
     FILE *output_file = fopen(output_filename, "wb"); // Open the output file for writing (decrypted data)
     if (!output_file) {
         fprintf(stderr, "ERROR: failed to open output file for decryption\n");
@@ -65,6 +64,7 @@ int decrypt_file(const char *input_filename, const char *output_filename, const 
     dec_res = EVP_DecryptFinal_ex(aes_ctx, decrypted_buf, &decrypted_len);
     if (dec_res == OPENSSL_FAIL) {
         fprintf(stderr, "ERROR: failed to decrypt data\n");
+        rm_file(output_filename);
         res = SSL_ERR;
         goto out_free_all;
     }
@@ -81,8 +81,10 @@ out_free_all:
     EVP_CIPHER_CTX_free(aes_ctx); 
 out_free_io_all:
     fclose(output_file);
+    output_file = NULL;
 out_free_io_in:
     fclose(input_file);
+    input_file = NULL;
 out_basic:
     return res;
 }

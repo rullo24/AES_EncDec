@@ -110,6 +110,7 @@ int file_exists(const char *filename) {
         goto out;
     }
     fclose(p_file);
+    p_file = NULL;
 out:
     return res;
 }
@@ -124,6 +125,7 @@ int file_loc_valid(const char *filepath) {
         goto out;
     }
     fclose(p_file);
+    p_file = NULL;
 
 out:
     return res;
