@@ -7,6 +7,7 @@ struct user_flags {
    char *enc_file;
    char *password;
    bool help_flag;
+   bool remove_old_flag;
 };
 
 #define SUCCESS 0
@@ -21,6 +22,8 @@ struct user_flags {
 #define SHOULD_NOT_PERFORM_CRYPTO_ERR -9
 #define UNKNOWN_ERR -10
 #define FILE_WRITE_ERR -11
+#define INVALID_USER_INPUT -12
+#define FILE_RM_ERR -13
 
 #define OPENSSL_FAIL 0
 #define OPENSSL_SUCCESS 1

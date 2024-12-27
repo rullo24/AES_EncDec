@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     }
 
     // init necessary variables
-    struct user_flags flags = { .dec_file=NULL, .enc_file=NULL, .password=NULL, .help_flag=false }; // memory allocated in argv
+    struct user_flags flags = { .dec_file=NULL, .enc_file=NULL, .password=NULL, .help_flag=false, .remove_old_flag=false }; // memory allocated in argv
     
     // gathers user data into flags struct --> also checks for filepath validity (returns err on invalidity)
     int get_flag_res = gather_user_flags(&flags, argc, argv);
@@ -119,12 +119,50 @@ int main(int argc, char **argv) {
         }
 
     } else {
-        fprintf(stderr, "ERROR: unknown error occurred\n");
+        fprintf(stderr, "ERROR: unknown error occurred (dec_file and enc_file are both NULL but passed all if statements)\n");
         return UNKNOWN_ERR;
     }
 
-    // removing old file if the --remove flag is on
-    // ... TBD later
+    // removing old file if the --remove flag is on --> recommended to leave off for safety reasons
+    if (flags.remove_old_flag) {
+        // ask user if they want to delete the old file if --remove is provided
+        char usr_buf[8] = {'\t'}; // shouldn't need anymore than 1 char
+        
+        // checking which file is to be removed
+        char *file_to_rm;
+        if (flags.dec_file) {
+            file_to_rm = flags.dec_file;
+        } else if (flags.enc_file) {
+            file_to_rm = flags.enc_file;
+        } else {
+            fprintf(stderr, "ERROR: unknown error\n");
+            return UNKNOWN_ERR;
+        }
+        
+        // getting user input
+        printf("CONFIRMATION: Remove old file (%s) on encryption/decryption (y/n)? ", file_to_rm); 
+        char *usr_get_ret = fgets(usr_buf, sizeof(usr_buf), stdin);
+        if (usr_get_ret == NULL) { // checking that user input is good
+            fprintf(stderr, "ERROR: could not capture user input\n");
+            return INVALID_USER_INPUT;
+        }
+        usr_buf[sizeof(usr_buf)] = '\0';
+        char *last_newline = strrchr(usr_buf, '\n');
+        if (last_newline) {
+            *last_newline = '\0'; // null terminating the provided string
+        }
+
+        if (strcmp(usr_buf, "y") != 0) {
+            fprintf(stderr, "ERROR: user provided --remove flag but did not confirm removal\n");
+            return INVALID_USER_INPUT;
+        }
+
+        // remove the input file
+        int rm_res = rm_file(file_to_rm);
+        if (rm_res != SUCCESS) {
+            return rm_res;
+        }
+    }
 
     return SUCCESS;
 }

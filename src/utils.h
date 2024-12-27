@@ -11,5 +11,6 @@ int file_exists(const char *filename);
 int file_loc_valid(const char *filepath);
 int next_argv_exists(int curr_i, int argc);
 int gather_user_flags(struct user_flags *p_flags, int argc, char **argv);
+int rm_file(const char *filepath);
 
 #endif

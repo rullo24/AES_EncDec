@@ -54,7 +54,7 @@ int decrypt_file(const char *input_filename, const char *output_filename, const 
 
         // write decrypted data to output file
         bytes_written = fwrite(decrypted_buf, 1, decrypted_len, output_file); // Write the decrypted data to the output file
-        if (bytes_written == 0) {
+        if ((size_t)decrypted_len > 0 && bytes_written != (size_t)decrypted_len) {
             fprintf(stderr, "ERROR: read bytes into buffer but could not write these to an output file\n");
             res = FILE_WRITE_ERR;
             goto out_free_all;
@@ -70,7 +70,7 @@ int decrypt_file(const char *input_filename, const char *output_filename, const 
     }
 
     bytes_written = fwrite(decrypted_buf, 1, decrypted_len, output_file); // Write the final block of decrypted data to the output file
-    if (bytes_written == 0) {
+    if ((size_t)decrypted_len > 0 && bytes_written != (size_t)decrypted_len) {
         fprintf(stderr, "ERROR: failed to write bytes to output file\n");
         res = FILE_WRITE_ERR;
         goto out_free_all;

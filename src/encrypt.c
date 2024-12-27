@@ -54,7 +54,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
 
         // write the encrypted data to the output file
         bytes_written = fwrite(encrypted_buf, 1, encrypted_len, output_file); 
-        if (bytes_written == 0) { // read more than 0 bytes but didnt write any
+        if ((size_t)encrypted_len > 0 && bytes_written != (size_t)encrypted_len) { // read more than 0 bytes but didnt write any
             fprintf(stderr, "ERROR: read bytes into buffer but could not write these to an output file\n");
             res = FILE_WRITE_ERR;
             goto out_free_all;
@@ -70,7 +70,7 @@ int encrypt_file(const char *input_filename, const char *output_filename, const 
     }
 
     bytes_written = fwrite(encrypted_buf, 1, encrypted_len, output_file); // write the final block of encrypted data to the output file
-    if (bytes_written == 0) {
+    if ((size_t)encrypted_len > 0 && bytes_written != (size_t)encrypted_len) {
         fprintf(stderr, "ERROR: failed to write bytes to output file\n");
         res = FILE_WRITE_ERR;
         goto out_free_all;

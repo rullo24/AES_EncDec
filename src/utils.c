@@ -8,9 +8,10 @@
 #include <openssl/aes.h> 
 #include <openssl/rand.h>
 #ifdef _WIN32
-#include <io.h>
+    #include <io.h>
+    #include <windows.h>
 #else
-#include <unistd.h>
+    #include <unistd.h>
 #endif
 
 // user includes
@@ -185,9 +186,31 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
                 goto out;
             }
             p_flags->password = argv[i+1]; // using stack memory assigned for entirety of main scope
+        } else if (strcmp(argv[i], "--remove") == 0) { // checking for removal flag
+            p_flags->remove_old_flag = true;
+            continue;
         }
     }
 
+out:
+    return res;
+}
+
+int rm_file(const char *filepath) {
+    int res = SUCCESS;
+#ifdef _WIN32 // WINDOWS
+    if (DeleteFileA(filepath) == 0) { // failed
+        fprintf(stderr, "ERROR: failed to delete file (%s)\n", filepath);
+        res = FILE_RM_ERR;
+        goto out;
+    }
+#else // UNIX
+    if (remove(filepath) != 0) { // failed
+        fprintf(stderr, "ERROR: failed to delete file (%s)\n", filepath);
+        res = FILE_RM_ERR;
+        goto out;
+    }
+#endif
 out:
     return res;
 }
