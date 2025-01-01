@@ -22,7 +22,7 @@ make clean
 ### Available Flags
 | Flag       | Description                                                                 |
 |------------|-----------------------------------------------------------------------------|
-| `-h`       | Displays the help menu.                                                    |
+| `-h`      | Displays the help menu.                                                    |
 | `-e`       | Encrypt a file. Requires a file name and password.                         |
 | `-d`       | Decrypt a file. Requires a file name and password.                         |
 | `-p`       | Specifies the password for encryption or decryption.                       |
