@@ -7,12 +7,8 @@
 #include <openssl/sha.h>
 #include <openssl/aes.h> 
 #include <openssl/rand.h>
-#ifdef _WIN32
-    #include <io.h>
-    #include <windows.h>
-#else
-    #include <unistd.h>
-#endif
+#include <unistd.h>
+#include <sys/stat.h>
 
 // user includes
 #include "utils.h"
@@ -79,7 +75,7 @@ int get_parent_dir_from_file_loc(const char *file_path, char *parent_dir, size_t
         fprintf(stderr, "ERROR: user parsed a 0 size\n");
         return INVALID_PARSE_ERR;
     }
-    parent_dir[parent_str_size] = '\0'; // ensuring the string is NULL terminated --> will overwrite previous NULL byte if string was all good
+    parent_dir[parent_str_size-1] = '\0'; // ensuring the string is NULL terminated --> will overwrite previous NULL byte if string was all good
 
     // copy the orig path to new location
     strncpy(parent_dir, file_path, parent_str_size);
@@ -100,46 +96,55 @@ int get_parent_dir_from_file_loc(const char *file_path, char *parent_dir, size_t
     return SUCCESS;
 }
 
-int file_exists(const char *filename) {
-    int res = SUCCESS;
-
-    // checking if the user can open the file --> fails if file doesn't exist
-    FILE *p_file = fopen(filename, "r");
-    if (!p_file) {
-        res = INVALID_FILE_PATH_ERR;
-        goto out;
+bool file_or_dir_exists(const char *filename) {
+    if (access(filename, R_OK) == -1) {
+        return false;
     }
-    fclose(p_file);
-    p_file = NULL;
-out:
-    return res;
+    return true;
 }
 
-int file_loc_valid(const char *filepath) {
-    int res = SUCCESS;
-
-    // checking if user can open file location --> fails if path loc invalid
-    FILE *p_file = fopen(filepath, "w");
-    if (!p_file) {
-        res = INVALID_FILE_PATH_ERR;
-        goto out;
+bool regular_file_exists(const char *filename) {
+    // Check if the file exists and is readable
+    bool exists_res = file_or_dir_exists(filename);
+    if (!exists_res) {
+        return false;
     }
-    fclose(p_file);
-    p_file = NULL;
+   
+    // checking that the provided file is a regular file
+    struct stat file_stat;
+    if (stat(filename, &file_stat) == 0 && !S_ISREG(file_stat.st_mode)) {
+        return false;
+    }
 
-out:
-    return res;
+    return true;
 }
 
-int next_argv_exists(int curr_i, int argc) {
-    int res = SUCCESS;
-    if (curr_i + 1 == argc) {
-        res = OUT_OF_RANGE_ERR;
-        goto out;
+bool file_loc_valid(const char *filepath) {
+    // check if the file or directory exists and if the user has write permission
+    FILE *p_file = fopen(filepath, "a");
+    if (!p_file) {
+        return false;
     }
+    fclose(p_file);
+    
+    return true;
+}
 
-out:
-    return res;
+bool next_argv_exists(int curr_i, int argc) {
+    if (curr_i + 1 < argc) {
+        return false;
+    }
+    return true;
+}
+
+void rm_backslashs_at_end_of_path_if_avail(char *path) {
+    size_t path_len = strlen(path);
+
+    // iterating from back of string --> remove all backslashes
+    while (path_len > 0 && path[path_len - 1] == '/') {
+        path[path_len - 1] = '\0'; // replacing additional backslash with null terminator
+        path_len--; // move to next character
+    }
 }
 
 int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
@@ -147,7 +152,7 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
 
     // iterate over all args --> look for flags
     for (int i=0; i<argc; i++) {
-        if (strcmp(argv[i], "-h") == 0) { // checking for help menu
+        if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) { // checking for help menu
             p_flags->help_flag = true;
             break;
 
@@ -159,12 +164,13 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
             }
             
             // check if provided file exists
-            if (file_exists(argv[i+1]) != SUCCESS) {
+            if (!file_or_dir_exists(argv[i+1])) {
                 fprintf(stderr, "ERROR: invalid filepath provided (-d)\n");
                 res = INVALID_FILE_PATH_ERR;
                 goto out;
             }
             p_flags->dec_file = argv[i+1]; // using stack memory assigned for entirety of main scope
+            rm_backslashs_at_end_of_path_if_avail(p_flags->dec_file);
 
         } else if (strcmp(argv[i], "-e") == 0) { // checking for encryption file
             if (next_argv_exists(i, argc) != SUCCESS) {
@@ -174,12 +180,13 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
             }
 
             // check if provided file exists
-            if (file_exists(argv[i+1]) != SUCCESS) {
+            if (!file_or_dir_exists(argv[i+1])) {
                 fprintf(stderr, "ERROR: invalid filepath provided (-e)\n");
                 res = INVALID_FILE_PATH_ERR;
                 goto out;
             }
             p_flags->enc_file = argv[i+1]; // using stack memory assigned for entirety of main scope
+            rm_backslashs_at_end_of_path_if_avail(p_flags->enc_file);
 
         } else if (strcmp(argv[i], "-p") == 0) { // checking for password
             if (next_argv_exists(i, argc) != SUCCESS) {
@@ -188,8 +195,13 @@ int gather_user_flags(struct user_flags *p_flags, int argc, char **argv) {
                 goto out;
             }
             p_flags->password = argv[i+1]; // using stack memory assigned for entirety of main scope
+
         } else if (strcmp(argv[i], "--remove") == 0) { // checking for removal flag
             p_flags->remove_old_flag = true;
+            continue;
+
+        } else if (strcmp(argv[i], "--recursive") == 0) { // checking for recursive flag
+            p_flags->recursive_crypto_flag = true;
             continue;
         }
     }
@@ -200,19 +212,31 @@ out:
 
 int rm_file(const char *filepath) {
     int res = SUCCESS;
-#ifdef _WIN32 // WINDOWS
-    if (DeleteFileA(filepath) == 0) { // failed
-        fprintf(stderr, "ERROR: failed to delete file (%s)\n", filepath);
-        res = FILE_RM_ERR;
-        goto out;
-    }
-#else // UNIX
     if (remove(filepath) != 0) { // failed
         fprintf(stderr, "ERROR: failed to delete file (%s)\n", filepath);
         res = FILE_RM_ERR;
         goto out;
     }
-#endif
 out:
     return res;
+}
+
+bool path_is_dir(const char *path) {
+    struct stat path_stat;
+
+    // getting the file stats
+    if (stat(path, &path_stat) != 0) {
+        fprintf(stderr, "ERROR: an error occurred when trying to collect the stat of file (%s)\n", path);
+        return false;   
+    }
+
+    return S_ISDIR(path_stat.st_mode); // returns true if valid dir
+}
+
+bool substring_is_in_phrase(const char *phrase, const char *substring) {
+    char *p_word_start = strstr(phrase, substring);
+    if (!p_word_start) { // remains NULL if cannot find
+        return false;
+    }
+    return true;
 }

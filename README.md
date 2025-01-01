@@ -26,6 +26,7 @@ make clean
 | `-e`       | Encrypt a file. Requires a file name and password.                         |
 | `-d`       | Decrypt a file. Requires a file name and password.                         |
 | `-p`       | Specifies the password for encryption or decryption.                       |
+| `--recursive` | Recursively encrypts or decrypts all valid files within a specified folder (does not go into folders) |
 | `--remove` | Deletes the original file after encryption or decryption (requires confirmation). |
 
 ### Encrypting Files

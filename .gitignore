@@ -1,3 +1,5 @@
 /archive/
 /.vscode/
 /test/
+/bin
+./cr_aes_encdec

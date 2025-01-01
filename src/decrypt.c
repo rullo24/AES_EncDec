@@ -1,3 +1,4 @@
+#include <limits.h>
 #include "decrypt.h"
 #include "utils.h"
 
